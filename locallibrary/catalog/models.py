@@ -1,9 +1,8 @@
 from django.db import models
-
-# Create your models here.
-
+from django.conf import settings
+import uuid # Required for unique book instances
 from django.urls import reverse # Used in get_absolute_url() to get URL for specified ID
-
+from datetime import date
 from django.db.models import UniqueConstraint # Constrains fields to unique values
 from django.db.models.functions import Lower # Returns lower cased value of field
 
@@ -47,6 +46,8 @@ class Book(models.Model):
                             help_text='13 Character <a href="https://www.isbn-international.org/content/what-isbn'
                                       '">ISBN number</a>')
 
+   
+
     # ManyToManyField used because genre can contain many books. Books can cover many genres.
     # Genre class has already been defined so we can specify the object above.
     genre = models.ManyToManyField(
@@ -68,7 +69,7 @@ class Book(models.Model):
 
 
 
-import uuid # Required for unique book instances
+
 
 class BookInstance(models.Model):
 
@@ -78,6 +79,7 @@ class BookInstance(models.Model):
     book = models.ForeignKey('Book', on_delete=models.RESTRICT, null=True)
     imprint = models.CharField(max_length=200)
     due_back = models.DateField(null=True, blank=True)
+    borrower = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 
     LOAN_STATUS = (
         ('m', 'Maintenance'),
@@ -101,6 +103,11 @@ class BookInstance(models.Model):
         """String for representing the Model object."""
         return f'{self.id} ({self.book.title})'
     
+    @property
+    def is_overdue(self):
+        """Determines if the book is overdue based on due date and current date."""
+        return bool(self.due_back and date.today() > self.due_back)
+
 
 
 class Author(models.Model):
